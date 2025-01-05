@@ -4,7 +4,14 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Excel Template Editor</title>
+        <!-- Handsontable CSS -->
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css"
+        />
         <script defer src="script.js"></script>
+        <!-- Handsontable JS -->
+        <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
     </head>
     <body>
         <h1>Excel Template Editor</h1>
@@ -23,7 +30,7 @@
         <button id="previewBtn">Preview</button>
         <button id="downloadBtn">Download</button>
 
-        <!-- Table for Preview -->
-        <div id="previewTable"></div>
+        <!-- Handsontable Container -->
+        <div id="excelPreview" style="margin-top: 20px"></div>
     </body>
 </html>

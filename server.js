@@ -6,12 +6,11 @@ const app = express()
 const port = 3000
 
 const templatesDir = path.join(__dirname, 'templates')
-const updatedFilesDir = path.join(__dirname, 'updated-files')
 
 // Middleware to handle JSON requests
 app.use(express.json())
 
-// Serve static files like CSS/JS
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public')))
 
 // Endpoint to fetch available templates
@@ -43,12 +42,11 @@ app.get('/get-placeholders', (req, res) => {
     res.json({ placeholders: Array.from(placeholders) })
 })
 
-// Endpoint to generate preview Excel file with user input (without saving)
+// Endpoint to preview the filled Excel file as an HTML table
 app.post('/preview-template', (req, res) => {
     const { fileName, formData } = req.body
     const filePath = path.join(templatesDir, fileName)
 
-    // Read the Excel template
     const workbook = xlsx.readFile(filePath)
     const sheet = workbook.Sheets[workbook.SheetNames[0]]
 
@@ -63,19 +61,12 @@ app.post('/preview-template', (req, res) => {
         })
     }
 
-    // Create a new workbook with updated data
-    const updatedWorkbook = xlsx.utils.book_new()
-    xlsx.utils.book_append_sheet(updatedWorkbook, sheet, workbook.SheetNames[0])
-
-    // Send the updated workbook as a preview (buffer)
-    const buffer = xlsx.write(updatedWorkbook, {
-        bookType: 'xlsx',
-        type: 'buffer',
-    })
-    res.send(buffer)
+    // Convert the sheet to JSON for Handsontable rendering
+    const jsonData = xlsx.utils.sheet_to_json(sheet, { header: 1 }) // Array of arrays
+    res.json(jsonData)
 })
 
-// Endpoint to generate the final filled Excel file (for download)
+// Endpoint to generate the final filled Excel file
 app.post('/fill-template', (req, res) => {
     const { fileName, formData } = req.body
     const filePath = path.join(templatesDir, fileName)
@@ -104,7 +95,14 @@ app.post('/fill-template', (req, res) => {
         bookType: 'xlsx',
         type: 'buffer',
     })
-    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`)
+    res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=filled_${fileName}`
+    )
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
     res.send(buffer)
 })
 

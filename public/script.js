@@ -3,7 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const dynamicFields = document.getElementById('dynamicFields')
     const previewBtn = document.getElementById('previewBtn')
     const downloadBtn = document.getElementById('downloadBtn')
-    const previewTable = document.getElementById('previewTable')
+    const excelPreview = document.getElementById('excelPreview')
+
+    let handsontableInstance // Handsontable instance
 
     // Fetch available templates when the page loads
     fetch('/get-templates')
@@ -26,10 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch placeholders when a template is selected
     templateSelect.addEventListener('change', () => {
         const selectedFile = templateSelect.value
-        console.log('Selected template:', selectedFile)
 
         if (!selectedFile) {
-            console.log('No template selected.')
             return
         }
 
@@ -37,34 +37,22 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`/get-placeholders?file=${selectedFile}`)
             .then((res) => res.json())
             .then((data) => {
-                console.log('Placeholders fetched:', data.placeholders)
-
-                // Generate form fields dynamically
                 dynamicFields.innerHTML = '' // Clear existing fields
                 data.placeholders.forEach((placeholder) => {
                     const label = document.createElement('label')
                     label.textContent = `${placeholder}: `
                     const input = document.createElement('input')
-                    input.name = placeholder // Field name will be the placeholder
+                    input.name = placeholder
                     input.placeholder = `Enter ${placeholder}`
                     dynamicFields.appendChild(label)
                     dynamicFields.appendChild(input)
                     dynamicFields.appendChild(document.createElement('br'))
                 })
             })
-            .catch((error) => {
-                console.error('Error fetching placeholders:', error)
-                alert('Failed to load placeholders. Please try again.')
-            })
     })
 
     // Handle preview button
     previewBtn.addEventListener('click', () => {
-        const formData = new FormData()
-        dynamicFields.querySelectorAll('input').forEach((input) => {
-            formData.append(input.name, input.value)
-        })
-
         const data = {
             fileName: templateSelect.value,
             formData: Object.fromEntries(
@@ -79,16 +67,22 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         })
-            .then((res) => res.blob())
-            .then((blob) => {
-                const url = window.URL.createObjectURL(blob)
-                const iframe = document.createElement('iframe')
-                iframe.src = url
-                iframe.width = '100%'
-                iframe.height = '500px'
-                previewTable.innerHTML = '' // Clear previous preview
-                previewTable.appendChild(iframe)
+            .then((res) => res.json())
+            .then((excelData) => {
+                // Render Excel data using Handsontable
+                if (handsontableInstance) {
+                    handsontableInstance.destroy() // Destroy existing instance if any
+                }
+                handsontableInstance = new Handsontable(excelPreview, {
+                    data: excelData,
+                    colHeaders: true,
+                    rowHeaders: true,
+                    licenseKey: 'non-commercial-and-evaluation', // For free version
+                })
             })
+            .catch((error) =>
+                console.error('Error previewing template:', error)
+            )
     })
 
     // Handle download button
@@ -112,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `filled_${data.fileName}`
+                a.download = `${data.fileName}` // Ensure filename ends with .xlsx
                 document.body.appendChild(a)
                 a.click()
                 a.remove()
