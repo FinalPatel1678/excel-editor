@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel Editor</title>
+</head>
+<body>
+  <h1>Excel File Editor</h1>
+  <form id="form">
+    <label for="file">Select a file:</label>
+    <select id="file" name="file">
+      <!-- Options will be dynamically populated -->
+    </select>
+
+    <div id="dynamicFields"></div>
+
+    <button type="button" onclick="submitForm()">Submit</button>
+  </form>
+
+  <script>
+    // Fetch available files
+    fetch("/get-files")
+      .then(response => response.json())
+      .then(data => {
+        const fileSelect = document.getElementById("file");
+        data.files.forEach(file => {
+          const option = document.createElement("option");
+          option.value = file;
+          option.textContent = file;
+          fileSelect.appendChild(option);
+        });
+      });
+
+    // Fetch dynamic fields when a file is selected
+    document.getElementById("file").addEventListener("change", function () {
+      const fileName = this.value;
+      fetch(`/get-fields?file=${fileName}`)
+        .then(response => response.json())
+        .then(data => {
+          const fieldsDiv = document.getElementById("dynamicFields");
+          fieldsDiv.innerHTML = ""; // Clear existing fields
+          data.fields.forEach(field => {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.name = field.name;
+            input.placeholder = field.placeholder;
+            fieldsDiv.appendChild(input);
+            fieldsDiv.appendChild(document.createElement("br"));
+          });
+        });
+    });
+
+    // Submit form data
+    function submitForm() {
+      const formData = new FormData(document.getElementById("form"));
+      fetch("/submit", {
+        method: "POST",
+        body: new URLSearchParams(formData),
+      })
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "updated_file.xlsx";
+          a.click();
+          window.URL.revokeObjectURL(url);
+        });
+    }
+  </script>
+</body>
+</html>
