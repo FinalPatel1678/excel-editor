@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch available templates
     function fetchTemplates() {
         templateLoading.textContent = messages[langSelect.value].loading
-        fetch('/get-templates')
+        fetch('api/get-templates')
             .then((res) => res.json())
             .then((data) => {
                 populateTemplateSelect(data.templates)
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dynamicFields.innerHTML = ''
         excelPreview.innerHTML = '' // Clear preview
 
-        fetch(`/get-placeholders?file=${template}`)
+        fetch(`api/get-placeholders?file=${template}`)
             .then((res) => res.json())
             .then((data) => populateDynamicFields(data.placeholders))
             .catch((error) => {
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return data
         }, {})
 
-        fetch('/preview-template', {
+        fetch('api/preview-template', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileName: templateSelect.value, formData }),
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formError.textContent = messages[langSelect.value].formError
             highlightEmptyFields(formData) // Add visual feedback
         } else {
-            fetch('/fill-template', {
+            fetch('api/fill-template', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
