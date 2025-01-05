@@ -22,3 +22,4 @@ Thumbs.db
 # OS-specific files
 *.swp
 *.swo
+.vercel
