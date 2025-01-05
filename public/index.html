@@ -4,33 +4,212 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Excel Template Editor</title>
-        <!-- Handsontable CSS -->
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css"
         />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            /* General Styling */
+            body {
+                font-family: 'Roboto', Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f9f9f9;
+                color: #333;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 20px;
+            }
+
+            h1 {
+                margin-bottom: 20px;
+                color: #007bff;
+                text-align: center;
+                border-bottom: 2px solid #ddd;
+                padding-bottom: 10px;
+            }
+
+            label {
+                font-weight: 500;
+            }
+
+            .container {
+                width: 100%;
+                max-width: 800px;
+                padding: 20px;
+                background: #fff;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+            /* Template Selection Section */
+            .template-section {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            #template {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+
+            #template:focus {
+                border: 1px solid #007bff;
+                background: #f0f8ff;
+                outline: none;
+            }
+
+            /* Dynamic Fields */
+            #dynamicFields {
+                margin-top: 10px;
+            }
+
+            #dynamicFields label {
+                font-weight: bold;
+                display: block;
+                margin: 5px 0;
+            }
+
+            #dynamicFields input {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                margin-bottom: 15px;
+            }
+
+            #dynamicFields input:focus {
+                border: 1px solid #007bff;
+                box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+                outline: none;
+            }
+
+            /* Buttons */
+            .buttons {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin-top: 20px;
+            }
+
+            #previewBtn,
+            #downloadBtn {
+                padding: 12px 20px;
+                background-color: #007bff;
+                color: #fff;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 1rem;
+                transition: all 0.3s ease;
+            }
+
+            #previewBtn:hover,
+            #downloadBtn:hover {
+                background-color: #0056b3;
+                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            .error-message,
+            .loading {
+                padding: 10px;
+                border-radius: 5px;
+                text-align: center;
+                font-size: 0.9rem;
+                margin-top: 10px;
+            }
+
+            .error-message {
+                color: #721c24;
+                background: #f8d7da;
+                border: 1px solid #f5c6cb;
+            }
+
+            .loading {
+                color: #004085;
+                background: #cce5ff;
+                border: 1px solid #b8daff;
+            }
+
+            /* Excel Preview Section */
+            #excelPreview {
+                margin-top: 20px;
+                width: 100%;
+                max-width: 1000px;
+                overflow-x: auto;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                background: #fafafa;
+                padding: 10px;
+                box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .htCore {
+                border: 1px solid #ccc;
+                box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            /* Responsive Design */
+            @media (max-width: 600px) {
+                .container {
+                    padding: 15px;
+                }
+
+                h1 {
+                    font-size: 1.5rem;
+                }
+
+                #previewBtn,
+                #downloadBtn {
+                    padding: 10px 15px;
+                    font-size: 0.9rem;
+                }
+
+                #excelPreview {
+                    max-width: 100%;
+                }
+            }
+        </style>
         <script defer src="script.js"></script>
-        <!-- Handsontable JS -->
         <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
     </head>
     <body>
         <h1>Excel Template Editor</h1>
 
-        <!-- Template Selection -->
-        <label for="template">Select Template:</label>
-        <select id="template"></select>
+        <div class="container">
+            <!-- Template Selection -->
+            <div class="template-section">
+                <label for="template">Select Template:</label>
+                <select id="template">
+                    <option disabled selected value="">
+                        Select a template...
+                    </option>
+                </select>
+                <div id="templateLoading" class="loading"></div>
+            </div>
 
-        <!-- Dynamic Input Fields -->
-        <div
-            id="dynamicFields"
-            style="margin-top: 20px; padding: 10px; border: 1px solid #ccc"
-        ></div>
+            <!-- Dynamic Input Fields -->
+            <div id="dynamicFields"></div>
 
-        <!-- Preview and Submit -->
-        <button id="previewBtn">Preview</button>
-        <button id="downloadBtn">Download</button>
+            <!-- Buttons -->
+            <div class="buttons">
+                <button id="previewBtn">Preview</button>
+                <button id="downloadBtn">Download</button>
+            </div>
+            <div id="formError" class="error-message"></div>
+        </div>
 
-        <!-- Handsontable Container -->
-        <div id="excelPreview" style="margin-top: 20px"></div>
+        <!-- Excel Preview -->
+        <div id="excelPreview" class="container"></div>
     </body>
 </html>

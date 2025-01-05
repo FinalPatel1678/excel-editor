@@ -4,112 +4,135 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewBtn = document.getElementById('previewBtn')
     const downloadBtn = document.getElementById('downloadBtn')
     const excelPreview = document.getElementById('excelPreview')
+    const formError = document.getElementById('formError')
+    const templateLoading = document.getElementById('templateLoading')
 
     let handsontableInstance // Handsontable instance
 
-    // Fetch available templates when the page loads
-    fetch('/get-templates')
-        .then((res) => res.json())
-        .then((data) => {
-            data.templates.forEach((template) => {
-                const option = document.createElement('option')
-                option.value = template
-                option.textContent = template
-                templateSelect.appendChild(option)
-            })
-
-            // Trigger change event to fetch placeholders for the selected template
-            if (templateSelect.value) {
-                templateSelect.dispatchEvent(new Event('change'))
-            }
-        })
-        .catch((error) => console.error('Error fetching templates:', error))
-
-    // Fetch placeholders when a template is selected
-    templateSelect.addEventListener('change', () => {
-        const selectedFile = templateSelect.value
-
-        if (!selectedFile) {
-            return
-        }
-
-        // Call the backend to fetch placeholders for the selected template
-        fetch(`/get-placeholders?file=${selectedFile}`)
+    // Fetch available templates
+    function fetchTemplates() {
+        templateLoading.textContent = 'Loading templates...'
+        fetch('/get-templates')
             .then((res) => res.json())
             .then((data) => {
-                dynamicFields.innerHTML = '' // Clear existing fields
+                templateSelect.innerHTML = '' // Clear existing options
+                data.templates.forEach((template) => {
+                    const option = document.createElement('option')
+                    option.value = template
+                    option.textContent = template
+                    templateSelect.appendChild(option)
+                })
+
+                templateLoading.textContent = '' // Clear loading text
+                if (templateSelect.value) {
+                    fetchPlaceholders(templateSelect.value)
+                }
+            })
+            .catch((error) => {
+                console.error('Error fetching templates:', error)
+                templateLoading.textContent = 'Failed to load templates!'
+            })
+    }
+
+    // Fetch placeholders for the selected template
+    function fetchPlaceholders(template) {
+        dynamicFields.innerHTML = '' // Clear existing fields
+        excelPreview.innerHTML = '' // Clear existing preview
+
+        fetch(`/get-placeholders?file=${template}`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.placeholders.length === 0) {
+                    dynamicFields.innerHTML =
+                        '<p>No placeholders found in the template.</p>'
+                    return
+                }
+
                 data.placeholders.forEach((placeholder) => {
                     const label = document.createElement('label')
                     label.textContent = `${placeholder}: `
                     const input = document.createElement('input')
                     input.name = placeholder
                     input.placeholder = `Enter ${placeholder}`
+                    input.required = true
                     dynamicFields.appendChild(label)
                     dynamicFields.appendChild(input)
                     dynamicFields.appendChild(document.createElement('br'))
                 })
             })
+            .catch((error) =>
+                console.error('Error fetching placeholders:', error)
+            )
+    }
+
+    // Handle template selection change
+    templateSelect.addEventListener('change', () => {
+        fetchPlaceholders(templateSelect.value)
     })
 
     // Handle preview button
     previewBtn.addEventListener('click', () => {
-        const data = {
-            fileName: templateSelect.value,
-            formData: Object.fromEntries(
-                Array.from(dynamicFields.querySelectorAll('input')).map(
-                    (input) => [input.name, input.value]
-                )
-            ),
+        formError.textContent = '' // Clear any previous error
+        const formData = Object.fromEntries(
+            Array.from(dynamicFields.querySelectorAll('input')).map((input) => [
+                input.name,
+                input.value,
+            ])
+        )
+
+        if (Object.values(formData).some((value) => !value.trim())) {
+            formError.textContent = 'Please fill all fields before previewing.'
+            return
         }
 
         fetch('/preview-template', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify({ fileName: templateSelect.value, formData }),
         })
             .then((res) => res.json())
             .then((excelData) => {
-                // Render Excel data using Handsontable
-                if (handsontableInstance) {
-                    handsontableInstance.destroy() // Destroy existing instance if any
-                }
+                if (handsontableInstance) handsontableInstance.destroy()
                 handsontableInstance = new Handsontable(excelPreview, {
                     data: excelData,
                     colHeaders: true,
                     rowHeaders: true,
-                    licenseKey: 'non-commercial-and-evaluation', // For free version
+                    licenseKey: 'non-commercial-and-evaluation',
                 })
             })
-            .catch((error) =>
-                console.error('Error previewing template:', error)
-            )
+            .catch((error) => console.error('Error generating preview:', error))
     })
 
     // Handle download button
     downloadBtn.addEventListener('click', () => {
-        const data = {
-            fileName: templateSelect.value,
-            formData: Object.fromEntries(
-                Array.from(dynamicFields.querySelectorAll('input')).map(
-                    (input) => [input.name, input.value]
-                )
-            ),
-        }
+        const formData = Object.fromEntries(
+            Array.from(dynamicFields.querySelectorAll('input')).map((input) => [
+                input.name,
+                input.value,
+            ])
+        )
 
         fetch('/fill-template', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify({ fileName: templateSelect.value, formData }),
         })
             .then((res) => res.blob())
             .then((blob) => {
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `${data.fileName}` // Ensure filename ends with .xlsx
+                a.download = `${templateSelect.value.replace(
+                    '.xlsx',
+                    '_filled.xlsx'
+                )}`
                 document.body.appendChild(a)
                 a.click()
                 a.remove()
             })
+            .catch((error) => console.error('Error downloading file:', error))
     })
+
+    // Initial fetch of templates
+    fetchTemplates()
 })

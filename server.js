@@ -1,112 +1,182 @@
 const express = require('express')
-const path = require('path')
+const bodyParser = require('body-parser')
+const multer = require('multer')
 const fs = require('fs')
-const xlsx = require('xlsx')
+const path = require('path')
+const ExcelJS = require('exceljs')
+
 const app = express()
-const port = 3000
+const PORT = 3000
 
-const templatesDir = path.join(__dirname, 'templates')
-
-// Middleware to handle JSON requests
-app.use(express.json())
-
-// Serve static files
+app.use(bodyParser.json())
 app.use(express.static(path.join(__dirname, 'public')))
 
-// Endpoint to fetch available templates
+const TEMPLATE_DIR = path.join(__dirname, 'templates')
+
+// Endpoint to get the list of templates
 app.get('/get-templates', (req, res) => {
-    const files = fs.readdirSync(templatesDir)
-    const templates = files.filter((file) => file.endsWith('.xlsx'))
-    res.json({ templates })
-})
-
-// Endpoint to get placeholders from the selected template
-app.get('/get-placeholders', (req, res) => {
-    const fileName = req.query.file
-    const filePath = path.join(templatesDir, fileName)
-
-    const workbook = xlsx.readFile(filePath)
-    const sheet = workbook.Sheets[workbook.SheetNames[0]]
-
-    const cellValues = Object.values(sheet).map((cell) => cell.v)
-    const placeholderPattern = /{{(.*?)}}/g
-    const placeholders = new Set()
-
-    cellValues.forEach((cellValue) => {
-        let match
-        while ((match = placeholderPattern.exec(cellValue)) !== null) {
-            placeholders.add(match[1])
+    fs.readdir(TEMPLATE_DIR, (err, files) => {
+        if (err) {
+            console.error('Error reading template directory:', err)
+            return res.status(500).json({ error: 'Unable to load templates' })
         }
-    })
 
-    res.json({ placeholders: Array.from(placeholders) })
+        const excelFiles = files.filter((file) => file.endsWith('.xlsx'))
+        res.json({ templates: excelFiles })
+    })
 })
 
-// Endpoint to preview the filled Excel file as an HTML table
-app.post('/preview-template', (req, res) => {
-    const { fileName, formData } = req.body
-    const filePath = path.join(templatesDir, fileName)
+// Endpoint to extract placeholders from a selected template
+app.get('/get-placeholders', async (req, res) => {
+    const fileName = req.query.file
 
-    const workbook = xlsx.readFile(filePath)
-    const sheet = workbook.Sheets[workbook.SheetNames[0]]
-
-    // Replace placeholders with user input
-    for (const [placeholder, value] of Object.entries(formData)) {
-        const regex = new RegExp(`{{${placeholder}}}`, 'g')
-        Object.keys(sheet).forEach((cellKey) => {
-            const cell = sheet[cellKey]
-            if (typeof cell.v === 'string') {
-                cell.v = cell.v.replace(regex, value)
-            }
-        })
+    if (!fileName) {
+        return res.status(400).json({ error: 'Template file name is required' })
     }
 
-    // Convert the sheet to JSON for Handsontable rendering
-    const jsonData = xlsx.utils.sheet_to_json(sheet, { header: 1 }) // Array of arrays
-    res.json(jsonData)
+    const filePath = path.join(TEMPLATE_DIR, fileName)
+
+    try {
+        const workbook = new ExcelJS.Workbook()
+        await workbook.xlsx.readFile(filePath)
+
+        const placeholders = new Set()
+
+        workbook.eachSheet((sheet) => {
+            sheet.eachRow((row) => {
+                row.eachCell((cell) => {
+                    const value = cell.value
+                    if (
+                        typeof value === 'string' &&
+                        value.includes('{{') &&
+                        value.includes('}}')
+                    ) {
+                        const matches = value.match(/{{(.*?)}}/g)
+                        matches.forEach((match) => {
+                            placeholders.add(match.replace(/{{|}}/g, '').trim())
+                        })
+                    }
+                })
+            })
+        })
+
+        res.json({ placeholders: Array.from(placeholders) })
+    } catch (error) {
+        console.error('Error extracting placeholders:', error)
+        res.status(500).json({
+            error: 'Failed to extract placeholders from the template',
+        })
+    }
 })
 
-// Endpoint to generate the final filled Excel file
-app.post('/fill-template', (req, res) => {
+// Endpoint to generate a preview of the Excel sheet
+app.post('/preview-template', async (req, res) => {
     const { fileName, formData } = req.body
-    const filePath = path.join(templatesDir, fileName)
 
-    // Read the Excel template
-    const workbook = xlsx.readFile(filePath)
-    const sheet = workbook.Sheets[workbook.SheetNames[0]]
-
-    // Replace placeholders with user input
-    for (const [placeholder, value] of Object.entries(formData)) {
-        const regex = new RegExp(`{{${placeholder}}}`, 'g')
-        Object.keys(sheet).forEach((cellKey) => {
-            const cell = sheet[cellKey]
-            if (typeof cell.v === 'string') {
-                cell.v = cell.v.replace(regex, value)
-            }
-        })
+    if (!fileName || !formData) {
+        return res
+            .status(400)
+            .json({ error: 'File name and form data are required' })
     }
 
-    // Create a new workbook with updated data
-    const updatedWorkbook = xlsx.utils.book_new()
-    xlsx.utils.book_append_sheet(updatedWorkbook, sheet, workbook.SheetNames[0])
+    const filePath = path.join(TEMPLATE_DIR, fileName)
 
-    // Send the updated file for download
-    const buffer = xlsx.write(updatedWorkbook, {
-        bookType: 'xlsx',
-        type: 'buffer',
-    })
-    res.setHeader(
-        'Content-Disposition',
-        `attachment; filename=filled_${fileName}`
-    )
-    res.setHeader(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    res.send(buffer)
+    try {
+        const workbook = new ExcelJS.Workbook()
+        await workbook.xlsx.readFile(filePath)
+
+        workbook.eachSheet((sheet) => {
+            sheet.eachRow((row) => {
+                row.eachCell((cell) => {
+                    if (
+                        typeof cell.value === 'string' &&
+                        cell.value.includes('{{') &&
+                        cell.value.includes('}}')
+                    ) {
+                        const placeholder = cell.value
+                            .match(/{{(.*?)}}/)[1]
+                            .trim()
+                        if (formData[placeholder]) {
+                            cell.value = formData[placeholder]
+                        }
+                    }
+                })
+            })
+        })
+
+        // Convert the workbook to JSON data for preview
+        const previewData = []
+        const sheet = workbook.worksheets[0] // Assume first sheet for preview
+        sheet.eachRow((row) => {
+            const rowData = []
+            row.eachCell((cell) => {
+                rowData.push(cell.value || '')
+            })
+            previewData.push(rowData)
+        })
+
+        res.json(previewData)
+    } catch (error) {
+        console.error('Error generating preview:', error)
+        res.status(500).json({ error: 'Failed to generate preview' })
+    }
+})
+
+// Endpoint to fill the template and return the filled file
+app.post('/fill-template', async (req, res) => {
+    const { fileName, formData } = req.body
+
+    if (!fileName || !formData) {
+        return res
+            .status(400)
+            .json({ error: 'File name and form data are required' })
+    }
+
+    const filePath = path.join(TEMPLATE_DIR, fileName)
+
+    try {
+        const workbook = new ExcelJS.Workbook()
+        await workbook.xlsx.readFile(filePath)
+
+        workbook.eachSheet((sheet) => {
+            sheet.eachRow((row) => {
+                row.eachCell((cell) => {
+                    if (
+                        typeof cell.value === 'string' &&
+                        cell.value.includes('{{') &&
+                        cell.value.includes('}}')
+                    ) {
+                        const placeholder = cell.value
+                            .match(/{{(.*?)}}/)[1]
+                            .trim()
+                        if (formData[placeholder]) {
+                            cell.value = formData[placeholder]
+                        }
+                    }
+                })
+            })
+        })
+
+        // Save the filled workbook to a buffer
+        const buffer = await workbook.xlsx.writeBuffer()
+
+        // Set proper headers and send the file for download
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=filled_${fileName}`
+        )
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        res.send(buffer)
+    } catch (error) {
+        console.error('Error filling template:', error)
+        res.status(500).json({ error: 'Failed to fill the template' })
+    }
 })
 
 // Start the server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`)
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`)
 })
