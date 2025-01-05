@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetch(`api/get-placeholders?file=${template}`)
             .then((res) => res.json())
-            .then((data) => populateDynamicFields(data.placeholders))
+            .then((data) => populateDynamicFields(data.placeholders_by_sheet))
             .catch((error) => {
                 console.error('Error fetching placeholders:', error)
                 dynamicFields.innerHTML = `<p>${
@@ -162,24 +162,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Populate dynamic fields
-    function populateDynamicFields(placeholders) {
-        if (placeholders.length === 0) {
+    function populateDynamicFields(placeholdersBySheet) {
+        dynamicFields.innerHTML = '' // Clear existing fields
+
+        // Filter sheets that have placeholders
+        const sheetsWithPlaceholders = Object.entries(
+            placeholdersBySheet
+        ).filter(([_, placeholders]) => placeholders.length > 0)
+
+        // If no sheets have placeholders, show a message
+        if (sheetsWithPlaceholders.length === 0) {
             dynamicFields.innerHTML = `<p>${
                 messages[langSelect.value].dynamicFieldsNoneFound
             }</p>`
             return
         }
-        placeholders.forEach((placeholder) => {
-            const label = document.createElement('label')
-            label.textContent = `${placeholder}: `
-            const input = document.createElement('input')
-            input.name = placeholder
-            input.placeholder = `${messages[
-                langSelect.value
-            ].warningEmptyField.replace('⚠️', '')} ${placeholder}`
-            dynamicFields.appendChild(label)
-            dynamicFields.appendChild(input)
-            dynamicFields.appendChild(document.createElement('br'))
+
+        // Iterate through sheets with placeholders and add sections
+        sheetsWithPlaceholders.forEach(([sheetName, placeholders]) => {
+            const section = document.createElement('div')
+            section.style.marginBottom = '20px'
+            section.style.border = '1px solid #ccc'
+            section.style.borderRadius = '5px'
+            section.style.padding = '10px'
+            section.style.backgroundColor = '#f9f9f9'
+
+            // Add a heading for the sheet
+            const heading = document.createElement('h3')
+            heading.textContent = `Sheet: ${sheetName}`
+            heading.style.marginBottom = '10px'
+            heading.style.color = '#007bff'
+            heading.style.fontSize = '1.2em'
+            section.appendChild(heading)
+
+            // Add placeholders for the sheet
+            placeholders.forEach((placeholder) => {
+                const label = document.createElement('label')
+                label.textContent = `${placeholder}: `
+                label.style.display = 'block'
+                label.style.marginBottom = '5px'
+                label.style.fontWeight = 'bold'
+
+                const input = document.createElement('input')
+                input.name = placeholder
+                input.placeholder = `${messages[
+                    langSelect.value
+                ].warningEmptyField.replace('⚠️', '')} ${placeholder}`
+                input.style.width = '100%'
+                input.style.marginBottom = '10px'
+                input.style.padding = '5px'
+                input.style.border = '1px solid #ccc'
+                input.style.borderRadius = '3px'
+
+                section.appendChild(label)
+                section.appendChild(input)
+            })
+
+            dynamicFields.appendChild(section)
         })
     }
 
@@ -248,18 +287,192 @@ document.addEventListener('DOMContentLoaded', () => {
         })
             .then((res) => res.json())
             .then((excelData) => {
-                if (handsontableInstance) handsontableInstance.destroy()
-                handsontableInstance = new Handsontable(excelPreview, {
-                    data: excelData,
-                    colHeaders: true,
-                    rowHeaders: true,
-                    height: '400px', // Set a max height for the preview container
-                    licenseKey: 'non-commercial-and-evaluation',
-                    columnSorting: true, // Sorting can help if the table is large
+                const container = document.createElement('div')
+                const tabsContainer = document.createElement('div')
+                const contentContainer = document.createElement('div')
+
+                container.appendChild(tabsContainer)
+                container.appendChild(contentContainer)
+                excelPreview.innerHTML = ''
+                excelPreview.appendChild(container)
+
+                tabsContainer.style.marginBottom = '10px'
+                tabsContainer.style.display = 'flex'
+                tabsContainer.style.flexWrap = 'wrap'
+
+                const instances = {}
+
+                Object.keys(excelData).forEach((sheetName, index) => {
+                    const tab = document.createElement('button')
+                    tab.textContent = sheetName
+                    tab.style.margin = '0 5px'
+                    tab.style.padding = '5px 10px'
+                    tab.style.cursor = 'pointer'
+
+                    const sheetDiv = document.createElement('div')
+                    sheetDiv.style.display = index === 0 ? 'block' : 'none'
+                    sheetDiv.style.width = '100%'
+                    sheetDiv.style.height = '400px'
+                    contentContainer.appendChild(sheetDiv)
+
+                    instances[sheetName] = new Handsontable(sheetDiv, {
+                        data: excelData[sheetName].map(
+                            (row) => row.map((cellData) => cellData.value || '') // Map to just the value for the data
+                        ),
+                        colHeaders:
+                            excelData[sheetName].length > 0
+                                ? Object.keys(excelData[sheetName][0])
+                                : [], // Dynamically set column headers
+                        rowHeaders: true,
+                        height: '400px',
+                        licenseKey: 'non-commercial-and-evaluation',
+                        columnSorting: true,
+                        cells: (row, col) => {
+                            const cellData = excelData[sheetName][row][col]
+                            const cellStyle = cellData.styles || {} // Get the cell styles
+
+                            return {
+                                renderer: (
+                                    instance,
+                                    td,
+                                    row,
+                                    col,
+                                    prop,
+                                    value,
+                                    cellProperties
+                                ) => {
+                                    // Apply default text renderer
+                                    Handsontable.renderers.TextRenderer(
+                                        instance,
+                                        td,
+                                        row,
+                                        col,
+                                        prop,
+                                        value,
+                                        cellProperties
+                                    )
+
+                                    // Apply background color if available
+                                    if (cellStyle.bg_color) {
+                                        td.style.backgroundColor =
+                                            cellStyle.bg_color
+                                    }
+
+                                    // Apply font styles if available
+                                    if (cellStyle.font) {
+                                        td.style.color =
+                                            cellStyle.font.color || ''
+                                        td.style.fontSize =
+                                            cellStyle.font.size || ''
+                                        td.style.fontWeight = cellStyle.font
+                                            .bold
+                                            ? 'bold'
+                                            : 'normal'
+                                        td.style.fontStyle = cellStyle.font
+                                            .italic
+                                            ? 'italic'
+                                            : 'normal'
+                                        td.style.textDecoration = cellStyle.font
+                                            .underline
+                                            ? 'underline'
+                                            : 'none'
+                                    }
+
+                                    // Apply borders if available
+                                    if (cellStyle.border) {
+                                        td.style.borderTop =
+                                            cellStyle.border.top.style || ''
+                                        td.style.borderRight =
+                                            cellStyle.border.right.style || ''
+                                        td.style.borderBottom =
+                                            cellStyle.border.bottom.style || ''
+                                        td.style.borderLeft =
+                                            cellStyle.border.left.style || ''
+
+                                        // Apply border color
+                                        td.style.borderTopColor =
+                                            cellStyle.border.top.color || ''
+                                        td.style.borderRightColor =
+                                            cellStyle.border.right.color || ''
+                                        td.style.borderBottomColor =
+                                            cellStyle.border.bottom.color || ''
+                                        td.style.borderLeftColor =
+                                            cellStyle.border.left.color || ''
+                                    }
+
+                                    // Apply number format (if any)
+                                    if (cellStyle.number_format) {
+                                        td.style.format =
+                                            cellStyle.number_format
+                                    }
+
+                                    // Apply hyperlink (if any)
+                                    if (cellStyle.hyperlink) {
+                                        td.innerHTML = `<a href="${cellStyle.hyperlink}" target="_blank">${td.innerHTML}</a>`
+                                    }
+
+                                    // Apply row height (if available)
+                                    // if (cellStyle.row_height) {
+                                    //     sheetDiv.style.height =
+                                    //         cellStyle.row_height + 'px'
+                                    // }
+
+                                    // Apply merged cells (if available)
+                                    if (cellStyle.merged) {
+                                        td.style.border = '2px solid #000' // Example for merged cells
+                                    }
+
+                                    // Add comments (if available)
+                                    if (cellStyle.comment) {
+                                        td.title = cellStyle.comment
+                                    }
+
+                                    // Handle formula if available
+                                    if (cellStyle.formula) {
+                                        td.style.fontStyle = 'italic'
+                                        td.style.color = 'blue'
+                                        td.title = `Formula: ${cellStyle.formula}`
+                                    }
+                                },
+                            }
+                        },
+                    })
+
+                    tab.addEventListener('click', () => {
+                        Object.values(instances).forEach((instance) => {
+                            instance.rootElement.style.display = 'none'
+                        })
+                        sheetDiv.style.display = 'block'
+                        instances[sheetName].render()
+
+                        tabsContainer
+                            .querySelectorAll('button')
+                            .forEach((btn) => {
+                                btn.style.backgroundColor = ''
+                                btn.style.color = ''
+                            })
+                        tab.style.backgroundColor = '#007bff'
+                        tab.style.color = 'white'
+                    })
+
+                    if (index === 0) {
+                        tab.style.backgroundColor = '#007bff'
+                        tab.style.color = 'white'
+                    }
+
+                    tabsContainer.appendChild(tab)
                 })
+
+                if (handsontableInstance) {
+                    Object.values(handsontableInstance).forEach((instance) =>
+                        instance.destroy()
+                    )
+                }
+                handsontableInstance = instances
             })
             .catch((error) => {
                 console.error('Error generating preview:', error)
+                alert('Failed to generate preview. Please try again later.')
             })
     }
 
