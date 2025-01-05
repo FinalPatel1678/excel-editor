@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch((error) => {
                 console.error(messages[langSelect.value].error, error)
-                templateLoading.textContent = 'Failed to load templates!'
+                templateLoading.textContent = messages[langSelect.value].error
             })
     }
 
@@ -119,15 +119,38 @@ document.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // Highlight empty fields with red borders
+    // Highlight empty fields with red borders and add warning icon
     function highlightEmptyFields(formData) {
         dynamicFields.querySelectorAll('input').forEach((input) => {
             if (!formData[input.name]) {
                 input.style.border = '1px solid red' // Highlight empty field
+                addWarningIcon(input) // Add warning icon for empty fields
             } else {
                 input.style.border = '' // Remove highlight when filled
+                removeWarningIcon(input) // Remove warning icon
             }
         })
+    }
+
+    // Add warning icon next to empty fields
+    function addWarningIcon(input) {
+        if (!input.nextElementSibling) {
+            const warningIcon = document.createElement('span')
+            warningIcon.textContent = '⚠️'
+            warningIcon.style.color = 'red'
+            warningIcon.style.marginLeft = '5px'
+            input.parentNode.appendChild(warningIcon)
+        }
+    }
+
+    // Remove warning icon
+    function removeWarningIcon(input) {
+        if (
+            input.nextElementSibling &&
+            input.nextElementSibling.textContent === '⚠️'
+        ) {
+            input.parentNode.removeChild(input.nextElementSibling)
+        }
     }
 
     // Handle template selection change
@@ -147,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = Array.from(
             dynamicFields.querySelectorAll('input')
         ).reduce((data, input) => {
-            data[input.name] = input.value || 'N/A' // Use 'N/A' for empty fields
+            data[input.name] = input.value
             return data
         }, {})
 
@@ -189,7 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (emptyFields) {
             formError.textContent = messages[langSelect.value].formError
-            alert(messages[langSelect.value].formError)
             highlightEmptyFields(formData) // Add visual feedback
         } else {
             fetch('/fill-template', {
@@ -222,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Change language when user selects different option
     langSelect.addEventListener('change', () => {
         updateUI(langSelect.value)
-        templateLoading.textContent = messages[langSelect.value].loading // Fix loading label issue
+        templateLoading.textContent = '' // Fix loading label issue
     })
 
     // Set the default language to Gujarati and update UI
