@@ -29,9 +29,6 @@
             h1 {
                 margin-bottom: 20px;
                 color: #007bff;
-                text-align: center;
-                border-bottom: 2px solid #ddd;
-                padding-bottom: 10px;
             }
 
             label {
@@ -48,6 +45,14 @@
                 margin-bottom: 20px;
             }
 
+            /* Language selector */
+            #languageSelector {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                padding: 5px;
+            }
+
             /* Template Selection Section */
             .template-section {
                 display: flex;
@@ -61,12 +66,6 @@
                 padding: 10px;
                 border: 1px solid #ccc;
                 border-radius: 5px;
-            }
-
-            #template:focus {
-                border: 1px solid #007bff;
-                background: #f0f8ff;
-                outline: none;
             }
 
             /* Dynamic Fields */
@@ -85,13 +84,7 @@
                 padding: 8px;
                 border: 1px solid #ccc;
                 border-radius: 5px;
-                margin-bottom: 15px;
-            }
-
-            #dynamicFields input:focus {
-                border: 1px solid #007bff;
-                box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
-                outline: none;
+                margin-bottom: 10px;
             }
 
             /* Buttons */
@@ -117,46 +110,42 @@
             #previewBtn:hover,
             #downloadBtn:hover {
                 background-color: #0056b3;
-                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            }
-
-            .error-message,
-            .loading {
-                padding: 10px;
-                border-radius: 5px;
-                text-align: center;
-                font-size: 0.9rem;
-                margin-top: 10px;
             }
 
             .error-message {
-                color: #721c24;
-                background: #f8d7da;
-                border: 1px solid #f5c6cb;
+                color: red;
+                font-size: 0.9rem;
+                text-align: center;
+                margin-top: 10px;
             }
 
             .loading {
-                color: #004085;
-                background: #cce5ff;
-                border: 1px solid #b8daff;
+                color: blue;
+                font-style: italic;
+                text-align: center;
+                margin-top: 10px;
             }
 
             /* Excel Preview Section */
             #excelPreview {
                 margin-top: 20px;
-                width: 100%;
-                max-width: 1000px;
                 overflow-x: auto;
+                width: 100%;
+                height: 400px; /* Adjust based on your design */
                 border: 1px solid #ccc;
-                border-radius: 5px;
-                background: #fafafa;
-                padding: 10px;
-                box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
             }
 
-            .htCore {
-                border: 1px solid #ccc;
-                box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+            /* Instructions */
+            .instructions {
+                background-color: #eef4f9;
+                padding: 15px;
+                border: 1px solid #cce1f7;
+                border-radius: 5px;
+                margin-top: 30px;
+                width: 100%;
+                max-width: 800px;
+                text-align: center;
+                font-size: 1rem;
             }
 
             /* Responsive Design */
@@ -174,10 +163,6 @@
                     padding: 10px 15px;
                     font-size: 0.9rem;
                 }
-
-                #excelPreview {
-                    max-width: 100%;
-                }
             }
         </style>
         <script defer src="script.js"></script>
@@ -186,15 +171,21 @@
     <body>
         <h1>Excel Template Editor</h1>
 
+        <div id="languageSelector">
+            <select id="langSelect">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="gu">Gujarati</option>
+            </select>
+        </div>
+
         <div class="container">
             <!-- Template Selection -->
             <div class="template-section">
-                <label for="template">Select Template:</label>
-                <select id="template">
-                    <option disabled selected value="">
-                        Select a template...
-                    </option>
-                </select>
+                <label for="template" id="templateLabel"
+                    >Select Template:</label
+                >
+                <select id="template"></select>
                 <div id="templateLoading" class="loading"></div>
             </div>
 
@@ -207,6 +198,15 @@
                 <button id="downloadBtn">Download</button>
             </div>
             <div id="formError" class="error-message"></div>
+        </div>
+
+        <!-- Instructions for users -->
+        <div class="instructions">
+            <p id="instructionText">
+                Please select a template and fill in the required fields. After
+                that, you can preview the template and download it with your
+                filled data.
+            </p>
         </div>
 
         <!-- Excel Preview -->

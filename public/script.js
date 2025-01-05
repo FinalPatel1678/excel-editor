@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const langSelect = document.getElementById('langSelect')
     const templateSelect = document.getElementById('template')
     const dynamicFields = document.getElementById('dynamicFields')
     const previewBtn = document.getElementById('previewBtn')
@@ -6,84 +7,132 @@ document.addEventListener('DOMContentLoaded', () => {
     const excelPreview = document.getElementById('excelPreview')
     const formError = document.getElementById('formError')
     const templateLoading = document.getElementById('templateLoading')
+    const instructionText = document.getElementById('instructionText')
 
     let handsontableInstance // Handsontable instance
 
+    const messages = {
+        en: {
+            templateLabel: 'Select Template:',
+            instructionText:
+                'Please select a template and fill in the required fields. After that, you can preview the template and download it with your filled data.',
+            previewBtn: 'Preview',
+            downloadBtn: 'Download',
+            loading: 'Loading templates...',
+            error: 'Error fetching templates.',
+            formError: 'Please fill all fields before previewing.',
+        },
+        hi: {
+            templateLabel: 'टेम्पलेट चुनें:',
+            instructionText:
+                'कृपया एक टेम्पलेट चुनें और आवश्यक फ़ील्ड भरें। उसके बाद, आप टेम्पलट का पूर्वावलोकन कर सकते हैं और भरे गए डेटा के साथ इसे डाउनलोड कर सकते हैं।',
+            previewBtn: 'पूर्वावलोकन',
+            downloadBtn: 'डाउनलोड',
+            loading: 'टेम्पलेट लोड हो रहा है...',
+            error: 'टेम्पलेट लोड करने में त्रुटि।',
+            formError: 'पूर्वावलोकन से पहले सभी फ़ील्ड भरें।',
+        },
+        gu: {
+            templateLabel: 'ટેમ્પલેટ પસંદ કરો:',
+            instructionText:
+                'કૃપા કરી એક ટેમ્પલેટ પસંદ કરો અને જરૂરી ફીલ્ડ ભરો. ત્યારબાદ, તમે ટેમ્પલેટનું પૂર્વાવલોકન કરી શકો છો અને ભરેલા ડેટા સાથે તેને ડાઉનલોડ કરી શકો છો.',
+            previewBtn: 'પૂર્વાવલોકન',
+            downloadBtn: 'ડાઉનલોડ',
+            loading: 'ટેમ્પલેટ લોડ થઈ રહ્યું છે...',
+            error: 'ટેમ્પલેટ લોડ કરવામાં ભૂલ.',
+            formError: 'પૂર્વાવલોકન કરતા પહેલા તમામ ફીલ્ડ ભરાવા પડે છે.',
+        },
+    }
+
+    // Update UI text based on selected language
+    function updateUI(language) {
+        document.getElementById('templateLabel').textContent =
+            messages[language].templateLabel
+        instructionText.textContent = messages[language].instructionText
+        previewBtn.textContent = messages[language].previewBtn
+        downloadBtn.textContent = messages[language].downloadBtn
+        templateLoading.textContent = messages[language].loading
+        formError.textContent = messages[language].formError
+    }
+
     // Fetch available templates
     function fetchTemplates() {
-        templateLoading.textContent = 'Loading templates...'
+        templateLoading.textContent = messages[langSelect.value].loading
         fetch('/get-templates')
             .then((res) => res.json())
             .then((data) => {
-                templateSelect.innerHTML = '' // Clear existing options
-                data.templates.forEach((template) => {
-                    const option = document.createElement('option')
-                    option.value = template
-                    option.textContent = template
-                    templateSelect.appendChild(option)
-                })
-
-                templateLoading.textContent = '' // Clear loading text
-                if (templateSelect.value) {
-                    fetchPlaceholders(templateSelect.value)
-                }
+                populateTemplateSelect(data.templates)
             })
             .catch((error) => {
-                console.error('Error fetching templates:', error)
+                console.error(messages[langSelect.value].error, error)
                 templateLoading.textContent = 'Failed to load templates!'
             })
     }
 
+    function populateTemplateSelect(templates) {
+        templateSelect.innerHTML = ''
+        templates.forEach((template) => {
+            const option = document.createElement('option')
+            option.value = template
+            option.textContent = template
+            templateSelect.appendChild(option)
+        })
+        templateLoading.textContent = ''
+        if (templateSelect.value) {
+            fetchPlaceholders(templateSelect.value)
+        }
+    }
+
     // Fetch placeholders for the selected template
     function fetchPlaceholders(template) {
-        dynamicFields.innerHTML = '' // Clear existing fields
-        excelPreview.innerHTML = '' // Clear existing preview
+        dynamicFields.innerHTML = ''
+        excelPreview.innerHTML = '' // Clear preview
 
         fetch(`/get-placeholders?file=${template}`)
             .then((res) => res.json())
-            .then((data) => {
-                if (data.placeholders.length === 0) {
-                    dynamicFields.innerHTML =
-                        '<p>No placeholders found in the template.</p>'
-                    return
-                }
-
-                data.placeholders.forEach((placeholder) => {
-                    const label = document.createElement('label')
-                    label.textContent = `${placeholder}: `
-                    const input = document.createElement('input')
-                    input.name = placeholder
-                    input.placeholder = `Enter ${placeholder}`
-                    input.required = true
-                    dynamicFields.appendChild(label)
-                    dynamicFields.appendChild(input)
-                    dynamicFields.appendChild(document.createElement('br'))
-                })
-            })
-            .catch((error) =>
+            .then((data) => populateDynamicFields(data.placeholders))
+            .catch((error) => {
                 console.error('Error fetching placeholders:', error)
-            )
+            })
+    }
+
+    function populateDynamicFields(placeholders) {
+        if (placeholders.length === 0) {
+            dynamicFields.innerHTML =
+                '<p>No placeholders found in the template.</p>'
+            return
+        }
+        placeholders.forEach((placeholder) => {
+            const label = document.createElement('label')
+            label.textContent = `${placeholder}: `
+            const input = document.createElement('input')
+            input.name = placeholder
+            input.placeholder = `Enter ${placeholder}`
+            dynamicFields.appendChild(label)
+            dynamicFields.appendChild(input)
+            dynamicFields.appendChild(document.createElement('br'))
+        })
     }
 
     // Handle template selection change
-    templateSelect.addEventListener('change', () => {
+    templateSelect.addEventListener('change', () =>
         fetchPlaceholders(templateSelect.value)
-    })
+    )
 
-    // Handle preview button
+    // Handle preview button (Allow preview without filling data)
     previewBtn.addEventListener('click', () => {
         formError.textContent = '' // Clear any previous error
-        const formData = Object.fromEntries(
-            Array.from(dynamicFields.querySelectorAll('input')).map((input) => [
-                input.name,
-                input.value,
-            ])
-        )
+        generatePreview() // Allow preview even if the form is not filled
+    })
 
-        if (Object.values(formData).some((value) => !value.trim())) {
-            formError.textContent = 'Please fill all fields before previewing.'
-            return
-        }
+    // Generate preview
+    function generatePreview() {
+        const formData = Array.from(
+            dynamicFields.querySelectorAll('input')
+        ).reduce((data, input) => {
+            data[input.name] = input.value
+            return data
+        }, {})
 
         fetch('/preview-template', {
             method: 'POST',
@@ -100,17 +149,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     licenseKey: 'non-commercial-and-evaluation',
                 })
             })
-            .catch((error) => console.error('Error generating preview:', error))
-    })
+            .catch((error) => {
+                console.error('Error generating preview:', error)
+            })
+    }
 
     // Handle download button
     downloadBtn.addEventListener('click', () => {
-        const formData = Object.fromEntries(
-            Array.from(dynamicFields.querySelectorAll('input')).map((input) => [
-                input.name,
-                input.value,
-            ])
-        )
+        const formData = Array.from(
+            dynamicFields.querySelectorAll('input')
+        ).reduce((data, input) => {
+            data[input.name] = input.value
+            return data
+        }, {})
 
         fetch('/fill-template', {
             method: 'POST',
@@ -130,9 +181,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 a.click()
                 a.remove()
             })
-            .catch((error) => console.error('Error downloading file:', error))
+            .catch((error) => {
+                console.error('Error downloading file:', error)
+            })
     })
 
-    // Initial fetch of templates
+    // Change language when user selects different option
+    langSelect.addEventListener('change', () => {
+        updateUI(langSelect.value)
+    })
+
+    // Initial setup
+    updateUI('gu')
     fetchTemplates()
 })
