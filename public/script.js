@@ -78,9 +78,11 @@ document.addEventListener('DOMContentLoaded', () => {
             templateSelect.appendChild(option)
         })
         templateLoading.textContent = ''
+
+        // Automatically generate preview for the selected template
         if (templateSelect.value) {
             fetchPlaceholders(templateSelect.value)
-            generatePreview() // Automatically generate the preview for the default template
+            generatePreview()
         }
     }
 
@@ -94,6 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .then((data) => populateDynamicFields(data.placeholders))
             .catch((error) => {
                 console.error('Error fetching placeholders:', error)
+                dynamicFields.innerHTML =
+                    '<p>No placeholders available for this template.</p>'
             })
     }
 
@@ -115,6 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
         })
     }
 
+    // Highlight empty fields with red borders
+    function highlightEmptyFields(formData) {
+        dynamicFields.querySelectorAll('input').forEach((input) => {
+            if (!formData[input.name]) {
+                input.style.border = '1px solid red' // Highlight empty field
+            } else {
+                input.style.border = '' // Remove highlight when filled
+            }
+        })
+    }
+
     // Handle template selection change
     templateSelect.addEventListener('change', () => {
         fetchPlaceholders(templateSelect.value)
@@ -132,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = Array.from(
             dynamicFields.querySelectorAll('input')
         ).reduce((data, input) => {
-            data[input.name] = input.value
+            data[input.name] = input.value || 'N/A' // Use 'N/A' for empty fields
             return data
         }, {})
 
@@ -148,7 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     data: excelData,
                     colHeaders: true,
                     rowHeaders: true,
+                    height: '400px', // Set a max height for the preview container
                     licenseKey: 'non-commercial-and-evaluation',
+                    columnSorting: true, // Sorting can help if the table is large
                 })
             })
             .catch((error) => {
@@ -171,8 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
         )
 
         if (emptyFields) {
-            formError.textContent = messages[langSelect.value].formError // Display the form error message
-            alert(messages[langSelect.value].formError) // Show an alert asking the user to fill all fields
+            formError.textContent = messages[langSelect.value].formError
+            alert(messages[langSelect.value].formError)
+            highlightEmptyFields(formData) // Add visual feedback
         } else {
             fetch('/fill-template', {
                 method: 'POST',
@@ -204,9 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Change language when user selects different option
     langSelect.addEventListener('change', () => {
         updateUI(langSelect.value)
+        templateLoading.textContent = messages[langSelect.value].loading // Fix loading label issue
     })
 
-    // Initial setup
+    // Set the default language to Gujarati and update UI
+    langSelect.value = 'gu'
     updateUI('gu')
+
+    // Fetch templates initially
     fetchTemplates()
 })
