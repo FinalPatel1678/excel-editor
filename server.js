@@ -1,88 +1,114 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const multer = require("multer");
-const XLSX = require("xlsx");
-const fs = require("fs");
-const path = require("path");
+const express = require('express')
+const path = require('path')
+const fs = require('fs')
+const xlsx = require('xlsx')
+const app = express()
+const port = 3000
 
-const app = express();
-const PORT = 3000;
+const templatesDir = path.join(__dirname, 'templates')
+const updatedFilesDir = path.join(__dirname, 'updated-files')
 
-// Middleware
-app.use(bodyParser.json());
-app.use(express.static("public")); // Serve static files (frontend)
-app.use(express.urlencoded({ extended: true }));
+// Middleware to handle JSON requests
+app.use(express.json())
 
-// Paths
-const FILES_DIR = path.join(__dirname, "files");
-const UPDATED_DIR = path.join(__dirname, "updated-files");
+// Serve static files like CSS/JS
+app.use(express.static(path.join(__dirname, 'public')))
 
-// Endpoint to list available files
-app.get("/get-files", (req, res) => {
-  const files = fs.readdirSync(FILES_DIR).filter(file => file.endsWith(".xlsx"));
-  res.json({ files });
-});
+// Endpoint to fetch available templates
+app.get('/get-templates', (req, res) => {
+    const files = fs.readdirSync(templatesDir)
+    const templates = files.filter((file) => file.endsWith('.xlsx'))
+    res.json({ templates })
+})
 
-// Endpoint to get dynamic fields for a selected file
-app.get("/get-fields", (req, res) => {
-  const fileName = req.query.file;
-  const filePath = path.join(FILES_DIR, fileName);
+// Endpoint to get placeholders from the selected template
+app.get('/get-placeholders', (req, res) => {
+    const fileName = req.query.file
+    const filePath = path.join(templatesDir, fileName)
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
-  }
+    const workbook = xlsx.readFile(filePath)
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]
 
-  // Read Excel file and extract headers
-  const workbook = XLSX.readFile(filePath);
-  const sheetName = workbook.SheetNames[0]; // Use the first sheet
-  const sheet = workbook.Sheets[sheetName];
-  const headers = Object.keys(sheet).filter(key => !key.startsWith("!"));
+    const cellValues = Object.values(sheet).map((cell) => cell.v)
+    const placeholderPattern = /{{(.*?)}}/g
+    const placeholders = new Set()
 
-  // Send fields to the frontend
-  const fields = headers.map(header => ({
-    name: header,
-    placeholder: `Enter value for cell ${header}`,
-  }));
-  res.json({ fields });
-});
+    cellValues.forEach((cellValue) => {
+        let match
+        while ((match = placeholderPattern.exec(cellValue)) !== null) {
+            placeholders.add(match[1])
+        }
+    })
 
-// Endpoint to process and update Excel file
-app.post("/submit", (req, res) => {
-  const fileName = req.body.file;
-  const filePath = path.join(FILES_DIR, fileName);
+    res.json({ placeholders: Array.from(placeholders) })
+})
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
-  }
+// Endpoint to generate preview Excel file with user input (without saving)
+app.post('/preview-template', (req, res) => {
+    const { fileName, formData } = req.body
+    const filePath = path.join(templatesDir, fileName)
 
-  // Read the Excel file
-  const workbook = XLSX.readFile(filePath);
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
+    // Read the Excel template
+    const workbook = xlsx.readFile(filePath)
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]
 
-  // Update the cells based on user input
-  Object.keys(req.body).forEach(key => {
-    if (key !== "file") {
-      sheet[key] = { v: req.body[key] };
+    // Replace placeholders with user input
+    for (const [placeholder, value] of Object.entries(formData)) {
+        const regex = new RegExp(`{{${placeholder}}}`, 'g')
+        Object.keys(sheet).forEach((cellKey) => {
+            const cell = sheet[cellKey]
+            if (typeof cell.v === 'string') {
+                cell.v = cell.v.replace(regex, value)
+            }
+        })
     }
-  });
 
-  // Save the updated file
-  if (!fs.existsSync(UPDATED_DIR)) {
-    fs.mkdirSync(UPDATED_DIR);
-}
-  const updatedFilePath = path.join(UPDATED_DIR, `updated_${fileName}`);
-  XLSX.writeFile(workbook, updatedFilePath);
+    // Create a new workbook with updated data
+    const updatedWorkbook = xlsx.utils.book_new()
+    xlsx.utils.book_append_sheet(updatedWorkbook, sheet, workbook.SheetNames[0])
 
-  // Send the updated file for download
-  res.download(updatedFilePath, err => {
-    if (err) {
-      console.error(err);
+    // Send the updated workbook as a preview (buffer)
+    const buffer = xlsx.write(updatedWorkbook, {
+        bookType: 'xlsx',
+        type: 'buffer',
+    })
+    res.send(buffer)
+})
+
+// Endpoint to generate the final filled Excel file (for download)
+app.post('/fill-template', (req, res) => {
+    const { fileName, formData } = req.body
+    const filePath = path.join(templatesDir, fileName)
+
+    // Read the Excel template
+    const workbook = xlsx.readFile(filePath)
+    const sheet = workbook.Sheets[workbook.SheetNames[0]]
+
+    // Replace placeholders with user input
+    for (const [placeholder, value] of Object.entries(formData)) {
+        const regex = new RegExp(`{{${placeholder}}}`, 'g')
+        Object.keys(sheet).forEach((cellKey) => {
+            const cell = sheet[cellKey]
+            if (typeof cell.v === 'string') {
+                cell.v = cell.v.replace(regex, value)
+            }
+        })
     }
-  });
-});
+
+    // Create a new workbook with updated data
+    const updatedWorkbook = xlsx.utils.book_new()
+    xlsx.utils.book_append_sheet(updatedWorkbook, sheet, workbook.SheetNames[0])
+
+    // Send the updated file for download
+    const buffer = xlsx.write(updatedWorkbook, {
+        bookType: 'xlsx',
+        type: 'buffer',
+    })
+    res.setHeader('Content-Disposition', `attachment; filename=${fileName}`)
+    res.send(buffer)
+})
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`)
+})

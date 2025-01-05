@@ -1,73 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Excel Editor</title>
-</head>
-<body>
-  <h1>Excel File Editor</h1>
-  <form id="form">
-    <label for="file">Select a file:</label>
-    <select id="file" name="file">
-      <!-- Options will be dynamically populated -->
-    </select>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Excel Template Editor</title>
+        <script defer src="script.js"></script>
+    </head>
+    <body>
+        <h1>Excel Template Editor</h1>
 
-    <div id="dynamicFields"></div>
+        <!-- Template Selection -->
+        <label for="template">Select Template:</label>
+        <select id="template"></select>
 
-    <button type="button" onclick="submitForm()">Submit</button>
-  </form>
+        <!-- Dynamic Input Fields -->
+        <div
+            id="dynamicFields"
+            style="margin-top: 20px; padding: 10px; border: 1px solid #ccc"
+        ></div>
 
-  <script>
-    // Fetch available files
-    fetch("/get-files")
-      .then(response => response.json())
-      .then(data => {
-        const fileSelect = document.getElementById("file");
-        data.files.forEach(file => {
-          const option = document.createElement("option");
-          option.value = file;
-          option.textContent = file;
-          fileSelect.appendChild(option);
-        });
-      });
+        <!-- Preview and Submit -->
+        <button id="previewBtn">Preview</button>
+        <button id="downloadBtn">Download</button>
 
-    // Fetch dynamic fields when a file is selected
-    document.getElementById("file").addEventListener("change", function () {
-      const fileName = this.value;
-      fetch(`/get-fields?file=${fileName}`)
-        .then(response => response.json())
-        .then(data => {
-          const fieldsDiv = document.getElementById("dynamicFields");
-          fieldsDiv.innerHTML = ""; // Clear existing fields
-          data.fields.forEach(field => {
-            const input = document.createElement("input");
-            input.type = "text";
-            input.name = field.name;
-            input.placeholder = field.placeholder;
-            fieldsDiv.appendChild(input);
-            fieldsDiv.appendChild(document.createElement("br"));
-          });
-        });
-    });
-
-    // Submit form data
-    function submitForm() {
-      const formData = new FormData(document.getElementById("form"));
-      fetch("/submit", {
-        method: "POST",
-        body: new URLSearchParams(formData),
-      })
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "updated_file.xlsx";
-          a.click();
-          window.URL.revokeObjectURL(url);
-        });
-    }
-  </script>
-</body>
+        <!-- Table for Preview -->
+        <div id="previewTable"></div>
+    </body>
 </html>
