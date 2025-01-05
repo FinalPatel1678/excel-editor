@@ -58,7 +58,6 @@
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
-                margin-bottom: 20px;
             }
 
             #template {
@@ -95,6 +94,7 @@
                 margin-top: 20px;
             }
 
+            #downloadPdfBtn,
             #previewBtn,
             #downloadBtn {
                 padding: 12px 20px;
@@ -107,6 +107,7 @@
                 transition: all 0.3s ease;
             }
 
+            #downloadPdfBtn:hover,
             #previewBtn:hover,
             #downloadBtn:hover {
                 background-color: #0056b3;
@@ -146,6 +147,7 @@
                 max-width: 800px;
                 text-align: center;
                 font-size: 1rem;
+                margin-bottom: 20px;
             }
 
             /* Responsive Design */
@@ -158,6 +160,7 @@
                     font-size: 1.5rem;
                 }
 
+                #downloadPdfBtn,
                 #previewBtn,
                 #downloadBtn {
                     padding: 10px 15px;
@@ -179,6 +182,15 @@
             </select>
         </div>
 
+        <!-- Instructions for users -->
+        <div class="instructions">
+            <p id="instructionText">
+                Please select a template and fill in the required fields. After
+                that, you can preview the template and download it with your
+                filled data.
+            </p>
+        </div>
+
         <div class="container">
             <!-- Template Selection -->
             <div class="template-section">
@@ -196,17 +208,9 @@
             <div class="buttons">
                 <button id="previewBtn">Preview</button>
                 <button id="downloadBtn">Download</button>
+                <button id="downloadPdfBtn">Download PDF</button>
             </div>
             <div id="formError" class="error-message"></div>
-        </div>
-
-        <!-- Instructions for users -->
-        <div class="instructions">
-            <p id="instructionText">
-                Please select a template and fill in the required fields. After
-                that, you can preview the template and download it with your
-                filled data.
-            </p>
         </div>
 
         <!-- Excel Preview -->

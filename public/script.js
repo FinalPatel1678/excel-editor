@@ -1,47 +1,84 @@
+const messages = {
+    en: {
+        templateLabel: 'Select Template:',
+        instructionText:
+            'Please select a template and fill in the required fields. After that, you can preview the template and download it with your filled data.',
+        previewBtn: 'Get Preview',
+        downloadBtn: 'Download File',
+        downloadPdfBtn: 'Download PDF',
+        loading: 'Loading templates...',
+        error: 'Error fetching templates.',
+        formError: 'Please fill all fields before downloading.',
+        dynamicFieldsEmpty: 'No placeholders available for this template.',
+        dynamicFieldsNoneFound: 'No placeholders found in the template.',
+        warningEmptyField: '⚠️ Please fill this field.', // Tooltip for empty fields
+        excelPreviewTitle: 'Template Preview (Editable)',
+        languageSelectLabel: 'Select Language:',
+    },
+    hi: {
+        templateLabel: 'टेम्पलेट चुनें:',
+        instructionText:
+            'कृपया एक टेम्पलट चुनें और आवश्यक फ़ील्ड भरें। उसके बाद, आप टेम्पलट का पूर्वावलोकन कर सकते हैं और भरे गए डेटा के साथ इसे डाउनलोड कर सकते हैं।',
+        previewBtn: 'पूर्वावलोकन प्राप्त करें',
+        downloadBtn: 'फ़ाइल डाउनलोड करें',
+        downloadPdfBtn: 'पीडीएफ डाउनलोड करें',
+        loading: 'टेम्पलट लोड हो रहा है...',
+        error: 'टेम्पलट लोड करने में त्रुटि।',
+        formError: 'डाउनलोड करने से पहले सभी फ़ील्ड भरें।',
+        dynamicFieldsEmpty: 'इस टेम्पलट के लिए कोई प्लेसहोल्डर उपलब्ध नहीं है।',
+        dynamicFieldsNoneFound: 'टेम्पलट में कोई प्लेसहोल्डर नहीं मिला।',
+        warningEmptyField: '⚠️ कृपया यह फ़ील्ड भरें।',
+        excelPreviewTitle: 'टेम्पलट पूर्वावलोकन (संपादन योग्य)',
+        languageSelectLabel: 'भाषा चुनें:',
+    },
+    gu: {
+        templateLabel: 'ટેમ્પલેટ પસંદ કરો:',
+        instructionText:
+            'કૃપા કરી એક ટેમ્પલેટ પસંદ કરો અને જરૂરી ફીલ્ડ ભરો. ત્યારબાદ, તમે ટેમ્પલેટનું પૂર્વાવલોકન કરી શકો છો અને ભરેલા ડેટા સાથે તેને ડાઉનલોડ કરી શકો છો.',
+        previewBtn: 'પૂર્વાવલોકન મેળવો',
+        downloadBtn: 'ફાઈલ ડાઉનલોડ કરો',
+        downloadPdfBtn: 'પીડીએફ ડાઉનલોડ કરો',
+        loading: 'ટેમ્પલેટ લોડ થઈ રહ્યું છે...',
+        error: 'ટેમ્પલેટ લોડ કરવામાં ભૂલ.',
+        formError: 'ડાઉનલોડ કરતા પહેલા તમામ ફીલ્ડ ભરાવા જોઈએ.',
+        dynamicFieldsEmpty: 'આ ટેમ્પલેટ માટે કોઈ પ્લેસહોલ્ડર ઉપલબ્ધ નથી.',
+        dynamicFieldsNoneFound: 'ટેમ્પલેટમાં કોઈ પ્લેસહોલ્ડર મળ્યા નથી.',
+        warningEmptyField: '⚠️ કૃપા કરી આ ફીલ્ડ ભરો.',
+        excelPreviewTitle: 'ટેમ્પલેટ પૂર્વાવલોકન (ફેરફાર યોગ્ય)',
+        languageSelectLabel: 'ભાષા પસંદ કરો:',
+    },
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const langSelect = document.getElementById('langSelect')
     const templateSelect = document.getElementById('template')
     const dynamicFields = document.getElementById('dynamicFields')
     const previewBtn = document.getElementById('previewBtn')
     const downloadBtn = document.getElementById('downloadBtn')
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn')
     const excelPreview = document.getElementById('excelPreview')
     const formError = document.getElementById('formError')
     const templateLoading = document.getElementById('templateLoading')
     const instructionText = document.getElementById('instructionText')
+    const languageSelectLabel = document.getElementById('languageSelectLabel') // Added if needed
 
-    let handsontableInstance // Handsontable instance
+    let handsontableInstance
 
-    const messages = {
-        en: {
-            templateLabel: 'Select Template:',
-            instructionText:
-                'Please select a template and fill in the required fields. After that, you can preview the template and download it with your filled data.',
-            previewBtn: 'Get Preview',
-            downloadBtn: 'Download File',
-            loading: 'Loading templates...',
-            error: 'Error fetching templates.',
-            formError: 'Please fill all fields before downloading.',
-        },
-        hi: {
-            templateLabel: 'टेम्पलेट चुनें:',
-            instructionText:
-                'कृपया एक टेम्पलट चुनें और आवश्यक फ़ील्ड भरें। उसके बाद, आप टेम्पलट का पूर्वावलोकन कर सकते हैं और भरे गए डेटा के साथ इसे डाउनलोड कर सकते हैं।',
-            previewBtn: 'पूर्वावलोकन प्राप्त करें',
-            downloadBtn: 'फ़ाइल डाउनलोड करें',
-            loading: 'टेम्पलट लोड हो रहा है...',
-            error: 'टेम्पलट लोड करने में त्रुटि।',
-            formError: 'डाउनलोड करने से पहले सभी फ़ील्ड भरें।',
-        },
-        gu: {
-            templateLabel: 'ટેમ્પલેટ પસંદ કરો:',
-            instructionText:
-                'કૃપા કરી એક ટેમ્પલેટ પસંદ કરો અને જરૂરી ફીલ્ડ ભરો. ત્યારબાદ, તમે ટેમ્પલેટનું પૂર્વાવલોકન કરી શકો છો અને ભરેલા ડેટા સાથે તેને ડાઉનલોડ કરી શકો છો.',
-            previewBtn: 'પૂર્વાવલોકન મેળવો',
-            downloadBtn: 'ફાઈલ ડાઉનલોડ કરો',
-            loading: 'ટેમ્પલેટ લોડ થઈ રહ્યું છે...',
-            error: 'ટેમ્પલેટ લોડ કરવામાં ભૂલ.',
-            formError: 'ડાઉનલોડ કરતા પહેલા તમામ ફીલ્ડ ભરાવા જોઈએ.',
-        },
+    // Common function to toggle loading state for buttons
+    function toggleButtonLoadingState(
+        button,
+        isLoading,
+        loadingText = messages[langSelect.value]?.loading || 'Loading...'
+    ) {
+        if (isLoading) {
+            button.disabled = true
+            button.dataset.originalText = button.textContent // Save original text
+            button.textContent = loadingText // Set loading text
+        } else {
+            button.disabled = false
+            button.textContent =
+                button.dataset.originalText || button.textContent // Restore original text
+        }
     }
 
     // Update UI text based on selected language
@@ -51,8 +88,30 @@ document.addEventListener('DOMContentLoaded', () => {
         instructionText.textContent = messages[language].instructionText
         previewBtn.textContent = messages[language].previewBtn
         downloadBtn.textContent = messages[language].downloadBtn
+        downloadPdfBtn.textContent = messages[language].downloadPdfBtn
         templateLoading.textContent = messages[language].loading
         formError.textContent = messages[language].formError
+        excelPreview.setAttribute(
+            'aria-label',
+            messages[language].excelPreviewTitle
+        ) // Accessible title for preview
+        if (languageSelectLabel) {
+            languageSelectLabel.textContent =
+                messages[language].languageSelectLabel
+        }
+    }
+
+    // Highlight empty fields with localized tooltips
+    function highlightEmptyFields(formData) {
+        dynamicFields.querySelectorAll('input').forEach((input) => {
+            if (!formData[input.name]) {
+                input.style.border = '1px solid red' // Highlight empty field
+                input.title = messages[langSelect.value].warningEmptyField // Tooltip
+            } else {
+                input.style.border = '' // Remove highlight when filled
+                input.title = '' // Remove tooltip
+            }
+        })
     }
 
     // Fetch available templates
@@ -96,15 +155,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .then((data) => populateDynamicFields(data.placeholders))
             .catch((error) => {
                 console.error('Error fetching placeholders:', error)
-                dynamicFields.innerHTML =
-                    '<p>No placeholders available for this template.</p>'
+                dynamicFields.innerHTML = `<p>${
+                    messages[langSelect.value].dynamicFieldsEmpty
+                }</p>`
             })
     }
 
+    // Populate dynamic fields
     function populateDynamicFields(placeholders) {
         if (placeholders.length === 0) {
-            dynamicFields.innerHTML =
-                '<p>No placeholders found in the template.</p>'
+            dynamicFields.innerHTML = `<p>${
+                messages[langSelect.value].dynamicFieldsNoneFound
+            }</p>`
             return
         }
         placeholders.forEach((placeholder) => {
@@ -112,7 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             label.textContent = `${placeholder}: `
             const input = document.createElement('input')
             input.name = placeholder
-            input.placeholder = `Enter ${placeholder}`
+            input.placeholder = `${messages[
+                langSelect.value
+            ].warningEmptyField.replace('⚠️', '')} ${placeholder}`
             dynamicFields.appendChild(label)
             dynamicFields.appendChild(input)
             dynamicFields.appendChild(document.createElement('br'))
@@ -162,7 +226,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle preview button (Allow preview without filling data)
     previewBtn.addEventListener('click', () => {
         formError.textContent = '' // Clear any previous error
-        generatePreview() // Allow preview even if the form is not filled
+        toggleButtonLoadingState(previewBtn, true, 'Generating Preview...')
+        generatePreview().finally(() =>
+            toggleButtonLoadingState(previewBtn, false)
+        ) // Re-enable button
     })
 
     // Generate preview
@@ -174,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return data
         }, {})
 
-        fetch('api/preview-template', {
+        return fetch('api/preview-template', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileName: templateSelect.value, formData }),
@@ -214,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formError.textContent = messages[langSelect.value].formError
             highlightEmptyFields(formData) // Add visual feedback
         } else {
+            toggleButtonLoadingState(downloadBtn, true, 'Downloading...')
             fetch('api/fill-template', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -238,6 +306,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch((error) => {
                     console.error('Error downloading file:', error)
                 })
+                .finally(() => toggleButtonLoadingState(downloadBtn, false)) // Re-enable button
+        }
+    })
+
+    // Handle PDF download button
+    downloadPdfBtn.addEventListener('click', () => {
+        const formData = Array.from(
+            dynamicFields.querySelectorAll('input')
+        ).reduce((data, input) => {
+            data[input.name] = input.value
+            return data
+        }, {})
+
+        // Check if any fields are empty
+        const emptyFields = Object.values(formData).some(
+            (value) => value === ''
+        )
+
+        if (emptyFields) {
+            formError.textContent = messages[langSelect.value].formError
+            highlightEmptyFields(formData)
+        } else {
+            toggleButtonLoadingState(downloadPdfBtn, true, 'Downloading PDF...')
+            fetch('api/fill-template-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileName: templateSelect.value,
+                    formData,
+                }),
+            })
+                .then((res) => res.blob())
+                .then((blob) => {
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${templateSelect.value.replace(
+                        '.xlsx',
+                        '_filled.pdf'
+                    )}`
+                    document.body.appendChild(a)
+                    a.click()
+                    a.remove()
+                })
+                .catch((error) => {
+                    console.error('Error downloading PDF:', error)
+                })
+                .finally(() => toggleButtonLoadingState(downloadPdfBtn, false)) // Re-enable button
         }
     })
 
@@ -248,8 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 
     // Set the default language to Gujarati and update UI
-    langSelect.value = 'gu'
-    updateUI('gu')
+    langSelect.value = 'en'
+    updateUI('en')
 
     // Fetch templates initially
     fetchTemplates()
