@@ -1,10 +1,10 @@
 {
     "name": "excel-editor",
     "version": "1.0.0",
-    "main": "index.js",
     "scripts": {
-        "start": "nodemon server.js"
-    },
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+      },
     "keywords": [],
     "author": "",
     "license": "ISC",

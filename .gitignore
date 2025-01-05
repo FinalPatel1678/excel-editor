@@ -8,12 +8,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Updated files
-updated-files/
-
-# Uploaded files (if any are saved temporarily)
-files/
-
 # Environmental variables
 .env
 
