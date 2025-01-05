@@ -16,31 +16,31 @@ document.addEventListener('DOMContentLoaded', () => {
             templateLabel: 'Select Template:',
             instructionText:
                 'Please select a template and fill in the required fields. After that, you can preview the template and download it with your filled data.',
-            previewBtn: 'Preview',
-            downloadBtn: 'Download',
+            previewBtn: 'Get Preview',
+            downloadBtn: 'Download File',
             loading: 'Loading templates...',
             error: 'Error fetching templates.',
-            formError: 'Please fill all fields before previewing.',
+            formError: 'Please fill all fields before downloading.',
         },
         hi: {
             templateLabel: 'टेम्पलेट चुनें:',
             instructionText:
-                'कृपया एक टेम्पलेट चुनें और आवश्यक फ़ील्ड भरें। उसके बाद, आप टेम्पलट का पूर्वावलोकन कर सकते हैं और भरे गए डेटा के साथ इसे डाउनलोड कर सकते हैं।',
-            previewBtn: 'पूर्वावलोकन',
-            downloadBtn: 'डाउनलोड',
-            loading: 'टेम्पलेट लोड हो रहा है...',
-            error: 'टेम्पलेट लोड करने में त्रुटि।',
-            formError: 'पूर्वावलोकन से पहले सभी फ़ील्ड भरें।',
+                'कृपया एक टेम्पलट चुनें और आवश्यक फ़ील्ड भरें। उसके बाद, आप टेम्पलट का पूर्वावलोकन कर सकते हैं और भरे गए डेटा के साथ इसे डाउनलोड कर सकते हैं।',
+            previewBtn: 'पूर्वावलोकन प्राप्त करें',
+            downloadBtn: 'फ़ाइल डाउनलोड करें',
+            loading: 'टेम्पलट लोड हो रहा है...',
+            error: 'टेम्पलट लोड करने में त्रुटि।',
+            formError: 'डाउनलोड करने से पहले सभी फ़ील्ड भरें।',
         },
         gu: {
             templateLabel: 'ટેમ્પલેટ પસંદ કરો:',
             instructionText:
                 'કૃપા કરી એક ટેમ્પલેટ પસંદ કરો અને જરૂરી ફીલ્ડ ભરો. ત્યારબાદ, તમે ટેમ્પલેટનું પૂર્વાવલોકન કરી શકો છો અને ભરેલા ડેટા સાથે તેને ડાઉનલોડ કરી શકો છો.',
-            previewBtn: 'પૂર્વાવલોકન',
-            downloadBtn: 'ડાઉનલોડ',
+            previewBtn: 'પૂર્વાવલોકન મેળવો',
+            downloadBtn: 'ફાઈલ ડાઉનલોડ કરો',
             loading: 'ટેમ્પલેટ લોડ થઈ રહ્યું છે...',
             error: 'ટેમ્પલેટ લોડ કરવામાં ભૂલ.',
-            formError: 'પૂર્વાવલોકન કરતા પહેલા તમામ ફીલ્ડ ભરાવા પડે છે.',
+            formError: 'ડાઉનલોડ કરતા પહેલા તમામ ફીલ્ડ ભરાવા જોઈએ.',
         },
     }
 
@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         templateLoading.textContent = ''
         if (templateSelect.value) {
             fetchPlaceholders(templateSelect.value)
+            generatePreview() // Automatically generate the preview for the default template
         }
     }
 
@@ -115,9 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Handle template selection change
-    templateSelect.addEventListener('change', () =>
+    templateSelect.addEventListener('change', () => {
         fetchPlaceholders(templateSelect.value)
-    )
+        generatePreview() // Generate preview whenever template is changed
+    })
 
     // Handle preview button (Allow preview without filling data)
     previewBtn.addEventListener('click', () => {
@@ -163,27 +165,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return data
         }, {})
 
-        fetch('/fill-template', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileName: templateSelect.value, formData }),
-        })
-            .then((res) => res.blob())
-            .then((blob) => {
-                const url = window.URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `${templateSelect.value.replace(
-                    '.xlsx',
-                    '_filled.xlsx'
-                )}`
-                document.body.appendChild(a)
-                a.click()
-                a.remove()
+        // Check if any fields are empty
+        const emptyFields = Object.values(formData).some(
+            (value) => value === ''
+        )
+
+        if (emptyFields) {
+            formError.textContent = messages[langSelect.value].formError // Display the form error message
+            alert(messages[langSelect.value].formError) // Show an alert asking the user to fill all fields
+        } else {
+            fetch('/fill-template', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileName: templateSelect.value,
+                    formData,
+                }),
             })
-            .catch((error) => {
-                console.error('Error downloading file:', error)
-            })
+                .then((res) => res.blob())
+                .then((blob) => {
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${templateSelect.value.replace(
+                        '.xlsx',
+                        '_filled.xlsx'
+                    )}`
+                    document.body.appendChild(a)
+                    a.click()
+                    a.remove()
+                })
+                .catch((error) => {
+                    console.error('Error downloading file:', error)
+                })
+        }
     })
 
     // Change language when user selects different option
