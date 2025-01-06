@@ -64,6 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let handsontableInstance
 
+    function showLoader(loader) {
+        loader.style.display = 'block'
+    }
+
+    function hideLoader(loader) {
+        loader.style.display = 'none'
+    }
+
     // Common function to toggle loading state for buttons
     function toggleButtonLoadingState(
         button,
@@ -147,17 +155,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch placeholders for the selected template
     function fetchPlaceholders(template) {
+        const placeholderLoading = document.getElementById('placeholderLoading')
+        showLoader(placeholderLoading)
         dynamicFields.innerHTML = ''
         excelPreview.innerHTML = '' // Clear preview
 
         fetch(`api/get-placeholders?file=${template}`)
             .then((res) => res.json())
-            .then((data) => populateDynamicFields(data.placeholders_by_sheet))
+            .then((data) => {
+                populateDynamicFields(data.placeholders_by_sheet)
+            })
             .catch((error) => {
                 console.error('Error fetching placeholders:', error)
                 dynamicFields.innerHTML = `<p>${
                     messages[langSelect.value].dynamicFieldsEmpty
                 }</p>`
+            })
+            .finally(() => {
+                hideLoader(placeholderLoading)
             })
     }
 
@@ -273,6 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generate preview
     function generatePreview() {
+        const previewLoading = document.getElementById('previewLoading')
+        showLoader(previewLoading)
         const formData = Array.from(
             dynamicFields.querySelectorAll('input')
         ).reduce((data, input) => {
@@ -316,13 +333,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     contentContainer.appendChild(sheetDiv)
 
                     instances[sheetName] = new Handsontable(sheetDiv, {
-                        data: excelData[sheetName].map(
-                            (row) => row.map((cellData) => cellData.value || '') // Map to just the value for the data
+                        data: excelData[sheetName].map((row) =>
+                            row.map((cellData) => cellData.value || '')
                         ),
                         colHeaders:
                             excelData[sheetName].length > 0
                                 ? Object.keys(excelData[sheetName][0])
-                                : [], // Dynamically set column headers
+                                : [],
                         rowHeaders: true,
                         height: '400px',
                         licenseKey: 'non-commercial-and-evaluation',
@@ -473,6 +490,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch((error) => {
                 console.error('Error generating preview:', error)
                 alert('Failed to generate preview. Please try again later.')
+            })
+            .finally(() => {
+                hideLoader(previewLoading)
             })
     }
 

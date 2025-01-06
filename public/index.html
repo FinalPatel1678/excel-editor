@@ -150,6 +150,34 @@
                 margin-bottom: 20px;
             }
 
+            .loading {
+                display: none;
+                text-align: center;
+                margin: 10px 0;
+                font-size: 16px;
+                color: #007bff;
+            }
+
+            .loading:after {
+                content: '...';
+                animation: ellipsis 1.2s infinite;
+            }
+
+            @keyframes ellipsis {
+                0% {
+                    content: '';
+                }
+                33% {
+                    content: '.';
+                }
+                66% {
+                    content: '..';
+                }
+                100% {
+                    content: '...';
+                }
+            }
+
             /* Responsive Design */
             @media (max-width: 600px) {
                 .container {
@@ -201,6 +229,10 @@
                 <div id="templateLoading" class="loading"></div>
             </div>
 
+            <div id="placeholderLoading" class="loading">
+                Loading placeholders
+            </div>
+
             <!-- Dynamic Input Fields -->
             <div id="dynamicFields"></div>
 
@@ -212,6 +244,8 @@
             </div>
             <div id="formError" class="error-message"></div>
         </div>
+
+        <div id="previewLoading" class="loading">Generating preview</div>    
 
         <!-- Excel Preview -->
         <div id="excelPreview" class="container"></div>

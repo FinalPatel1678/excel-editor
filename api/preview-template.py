@@ -122,7 +122,7 @@ class handler(BaseHTTPRequestHandler):
                 # Apply form data to placeholders
                 for column in df.columns:
                     df[column] = df[column].apply(lambda x: 
-                        form_data.get(x[2:-2].strip()) if isinstance(x, str) and '{{' in str(x) and '}}' in str(x)
+                        form_data.get(x[2:-2].strip(), x) if isinstance(x, str) and '{{' in x and '}}' in x  
                         else x
                     )
 
